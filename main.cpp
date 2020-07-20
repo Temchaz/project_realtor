@@ -4,18 +4,12 @@
 #include "detector.cpp"
 
 #include <iostream>
-//#include <opencv2/core/utils/filesystem.hpp>
-//#include <opencv2/opencv.hpp>
-//#include <inference_engine.hpp>
 
-//using namespace cv;
-//using namespace detect;
 
 struct room {
-    bool isHighPriorityItem = false;
+    int highPriorityItem = 0;
     int cntItems = 0;
 };
-
 
 //82 - refrigerator
 //79 - oven
@@ -31,14 +25,13 @@ bool isKitchenroom(unsigned& ptr)
 }
 
 //69 - desk
-//67 -dining table
 //62 - chair
 //63 - couch
 //72 - tv
 //65 - bed
 bool isLivingroom(unsigned& ptr)
 {
-    if (ptr == 69 || ptr == 67 || ptr == 62 || ptr == 72)
+    if (ptr == 69 || ptr == 62 || ptr == 72)
         return true;
     else return false;
 }
@@ -73,7 +66,7 @@ int main()
     const float nmsThreshold = 0.45f;
     const float probThreshold = 0.2f;
 
-    cv::Mat img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data", "g1.jpg"));
+    cv::Mat img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data", "v3.jpg"));
 
     Detector model;
     std::vector<cv::Rect> boxes;
@@ -91,12 +84,14 @@ int main()
     imshow("Detection", img);
     
     room kitchen, bathroom, livingroom;
-    for (int i(0); i < classes.size(); i++) {
-        if (isHighPriorityKitchen(classes[i])) kitchen.isHighPriorityItem = true;
-        if (isHighPriorityBathroom(classes[i])) bathroom.isHighPriorityItem = true;
-        if (isHighPriorityLivingroom(classes[i])) livingroom.isHighPriorityItem = true;
-    }
     
+    for (int i(0); i < classes.size(); i++) 
+    {
+        if (isHighPriorityKitchen(classes[i])) kitchen.highPriorityItem++;
+        if (isHighPriorityBathroom(classes[i])) bathroom.highPriorityItem++;
+        if (isHighPriorityLivingroom(classes[i])) livingroom.highPriorityItem++;
+    }
+
     for (int i = 0; i < classes.size(); i++)
     {
         if (isbathroom(classes[i]))
@@ -107,33 +102,18 @@ int main()
             kitchen.cntItems++;
     }    
     
-    if (kitchen.isHighPriorityItem && !bathroom.isHighPriorityItem && !livingroom.isHighPriorityItem)
+    // Determine the room by the count of high priority items
+    if (kitchen.highPriorityItem > bathroom.highPriorityItem && kitchen.highPriorityItem > livingroom.highPriorityItem)
         std::cout << "kitchen" << std::endl;
-    else if (!kitchen.isHighPriorityItem && bathroom.isHighPriorityItem && !livingroom.isHighPriorityItem)
+    else if (bathroom.highPriorityItem > kitchen.highPriorityItem && bathroom.highPriorityItem > livingroom.highPriorityItem)
         std::cout << "bathroom" << std::endl;
-    else if (!kitchen.isHighPriorityItem && !bathroom.isHighPriorityItem && livingroom.isHighPriorityItem)
+    else if (livingroom.highPriorityItem > kitchen.highPriorityItem && livingroom.highPriorityItem > bathroom.highPriorityItem)
         std::cout << "livingroom" << std::endl;
-    else if (kitchen.isHighPriorityItem && bathroom.isHighPriorityItem && livingroom.isHighPriorityItem)
+    // The number of the high priority items are equal for all rooms
+    else if (kitchen.highPriorityItem == livingroom.highPriorityItem && bathroom.highPriorityItem == livingroom.highPriorityItem && kitchen.highPriorityItem != 0)
         std::cout << "room is not identified" << std::endl;
-    else if (kitchen.isHighPriorityItem && bathroom.isHighPriorityItem) // && !livingroom.isHighPriorityItem)
-    {
-        if (kitchen.cntItems > bathroom.cntItems) std::cout << "kitchen" << std::endl;
-        else if (kitchen.cntItems < bathroom.cntItems) std::cout << "bathroom" << std::endl;
-        else std::cout << "room is not identified" << std::endl;
-    }
-    else if (kitchen.isHighPriorityItem && livingroom.isHighPriorityItem)
-    {
-        if (kitchen.cntItems > livingroom.cntItems) std::cout << "kitchen" << std::endl;
-        else if (kitchen.cntItems < livingroom.cntItems) std::cout << "livingroom" << std::endl;
-        else std::cout << "room is not identified" << std::endl;
-    }
-    else if (bathroom.isHighPriorityItem && livingroom.isHighPriorityItem)
-    {
-        if (bathroom.cntItems > livingroom.cntItems) std::cout << "bathroom" << std::endl;
-        else if (bathroom.cntItems < livingroom.cntItems) std::cout << "livingroom" << std::endl;
-        else std::cout << "room is not identified" << std::endl;
-    }
-    else if (!kitchen.isHighPriorityItem && !bathroom.isHighPriorityItem && !livingroom.isHighPriorityItem)
+    // No high high priority items, check by other items
+    else if (kitchen.highPriorityItem == 0 && bathroom.highPriorityItem == 0 && livingroom.highPriorityItem == 0)
     {
         if (kitchen.cntItems > bathroom.cntItems && kitchen.cntItems > livingroom.cntItems)
         {
@@ -149,7 +129,25 @@ int main()
         }
         else std::cout << "room is not identified" << std::endl;
     }
+    // The number of the high priority items are equal for two rooms
+    else if (kitchen.highPriorityItem == bathroom.highPriorityItem)
+    {
+        if (kitchen.cntItems > bathroom.cntItems) std::cout << "kitchen" << std::endl;
+        else if (kitchen.cntItems < bathroom.cntItems) std::cout << "bathroom" << std::endl;
+        else std::cout << "room is not identified" << std::endl;
+    }
+    else if (kitchen.highPriorityItem == livingroom.highPriorityItem)
+    {
+        if (kitchen.cntItems > livingroom.cntItems) std::cout << "kitchen" << std::endl;
+        else if (kitchen.cntItems < livingroom.cntItems) std::cout << "livingroom" << std::endl;
+        else std::cout << "room is not identified" << std::endl;
+    }
+    else if (bathroom.highPriorityItem == livingroom.highPriorityItem)
+    {
+        if (bathroom.cntItems > livingroom.cntItems) std::cout << "bathroom" << std::endl;
+        else if (bathroom.cntItems < livingroom.cntItems) std::cout << "livingroom" << std::endl;
+        else std::cout << "room is not identified" << std::endl;
+    }
 
-    
     cv::waitKey();
 }
