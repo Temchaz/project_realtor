@@ -15,14 +15,15 @@ Detector::Detector() {
 	InferenceEngine::Core ie;
 
 	// load deep learning network into memory
-	auto net = ie.ReadNetwork(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/neuralNetworks", "ssd_mobilenet_v2_coco.xml"),
+	auto net = ie.ReadNetwork(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/neuralNetworks", "ssd_mobilenet_v2_coco.xml"), //ssd_mobilenet_v2_coco
 		cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/neuralNetworks", "ssd_mobilenet_v2_coco.bin"));
 	// specify preprocessing procedures
 	// (note: this part is different for different models!)
 	auto inputinfo = net.getInputsInfo()["image_tensor"];
 	inputinfo->getPreProcess().setResizeAlgorithm(InferenceEngine::ResizeAlgorithm::RESIZE_BILINEAR);
-	inputinfo->setLayout(InferenceEngine::Layout::NHWC);
+	inputinfo->setLayout(InferenceEngine::Layout::NHWC); 
 	inputinfo->setPrecision(InferenceEngine::Precision::U8);
+
 	outputName = net.getOutputsInfo().begin()->first;
 
 	// initialize runnable object on cpu device
@@ -33,12 +34,13 @@ Detector::Detector() {
 }
 
 
-InferenceEngine::Blob::Ptr wrapMatToBlob1(const cv::Mat& m) {
+InferenceEngine::Blob::Ptr wrapMatToBlob(const cv::Mat& m) {
 	CV_Assert(m.depth() == CV_8U);
 	std::vector<size_t> dims = { 1, (size_t)m.channels(), (size_t)m.rows, (size_t)m.cols };
 	return InferenceEngine::make_shared_blob<uint8_t>(InferenceEngine::TensorDesc(InferenceEngine::Precision::U8, dims, InferenceEngine::Layout::NHWC),
 		m.data);
 }
+
 
 void Detector::detect(const cv::Mat& image,
 	float nmsThreshold,
@@ -47,11 +49,10 @@ void Detector::detect(const cv::Mat& image,
 	std::vector<float>& probabilities,
 	std::vector<unsigned>& classes) {
 	// Create 4D blob from BGR image
-	InferenceEngine::Blob::Ptr input = wrapMatToBlob1(image);
+	InferenceEngine::Blob::Ptr input = wrapMatToBlob(image);
 
 	// Pass blob as network's input. "data" is a name of input from .xml file
 	req.SetBlob("image_tensor", input);
-
 	// Launch network
 	req.Infer();
 

@@ -18,7 +18,6 @@ public:
 		this->name = copy.name;
 	}
 	
-
 	virtual void countPriorityItem(unsigned& ptr) {};
 	virtual void countItems(unsigned& ptr) {};
 	virtual std::string Name() { return this->name; };
