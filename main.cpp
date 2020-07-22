@@ -2,12 +2,15 @@
 //
 
 #include "detector.cpp"
-#include "room.cpp"
+#include "room.hpp"
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <opencv2\core\utils\filesystem.hpp>
+
+
 
 void heuristic(const float _nmsThreshold, const float _probThreshold, cv::Mat& _img) {
 	Detector model;
@@ -199,5 +202,5 @@ int main()
 		std::cout << "Press 1 to run program\nPress 2 to run test\nPress q to quit\n>> ";
 		std::cin >> choose;
 	}
-	std::cout << "bay bay"<<std::endl;
+	std::cout << "bay bay" << std::endl;
 }
