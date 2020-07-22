@@ -41,7 +41,7 @@ public:
 	}
 	
 	void countPriorityItem(unsigned& ptr) override {
-		if (ptr == 82) this->highPriorityItem++;
+		if (ptr == 79 || ptr == 82) this->highPriorityItem++;
 	}
 
 	void countItems(unsigned& ptr) override {

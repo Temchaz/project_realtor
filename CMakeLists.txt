@@ -11,3 +11,6 @@ target_link_libraries(Detector  PUBLIC ${OpenCV_LIBRARIES} ${InferenceEngine_LIB
 
 add_executable(realtor main.cpp)
 target_link_libraries(realtor  PUBLIC Detector)
+
+add_executable(testRealtor test_rooms.cpp)
+target_link_libraries(testRealtor PUBLIC Detector)
