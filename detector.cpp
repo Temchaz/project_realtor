@@ -3,7 +3,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
 #include <inference_engine.hpp>
-
 #include <algorithm>
 
 using namespace cv;
