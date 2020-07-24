@@ -83,5 +83,5 @@ void test_main(std::string path)
 }
 
 int main() {
-	test_main("C:/Users/79308/Desktop/projectRealtor/data2");
+	test_main("C:/Users/79308/Desktop/projectRealtor/data3");
 }

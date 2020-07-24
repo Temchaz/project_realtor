@@ -1,7 +1,4 @@
-﻿// realtor.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
-//
-
-#include "detector.hpp"
+﻿#include "detector.hpp"
 #include "room.hpp"
 #include <iostream>
 #include <algorithm>
@@ -117,82 +114,142 @@ void heuristic(const float _nmsThreshold, const float _probThreshold, cv::Mat& _
 	else std::cout << "This room is " << rooms.at(0)->Name() << std::endl;
 }
 
-//int main()
-//{
-//	const float nmsThreshold = 0.45f;
-//	const float probThreshold = 0.2f;
-//	std::string imageName;
-//	std::cout << "Input name of image (q for quit)\n>> ";
-//	std::cin >> imageName;
-//	while (imageName != "q") {
-//		cv::Mat img;
-//		switch (imageName.at(0)) {
-//		case ('k'):
-//			img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data/kitchen", imageName+".jpg"));
-//			break;
-//		case ('l'):
-//			img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data/livingroom", imageName+".jpg"));
-//			break;
-//		case ('b'):
-//			img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data/bathroom", imageName+ ".jpg"));
-//			break;
-//		default:
-//			break;
-//		}
-//		heuristic(nmsThreshold, probThreshold, img);
-//		cv::waitKey();
-//		std::cout << "Input name of image (q for quit)\n>> ";
-//		std::cin >> imageName;
-//	}
-//}
 
-void emb_func(std::string inputPath, std::string inputName) {
-	Embedding embedding;
+std::string test_func(const float _nmsThreshold, const float _probThreshold, cv::Mat& _img) {
+	Detector model;
+	std::vector<cv::Rect> boxes;
+	std::vector<float> probs;
+	std::vector<unsigned> classes;
+	model.detect(_img, _nmsThreshold, _probThreshold, boxes, probs, classes);
+	Kitchenroom kitchen;
+	Bathroom bathroom;
+	Livingroom livingroom;
+
+	for (int i(0); i < classes.size(); i++)
+	{
+		kitchen.countPriorityItem(classes[i]);
+		kitchen.countItems(classes[i]);
+		bathroom.countPriorityItem(classes[i]);
+		bathroom.countItems(classes[i]);
+		livingroom.countPriorityItem(classes[i]);
+		livingroom.countItems(classes[i]);
+	}
+
+	std::vector<Room*> rooms;
+	rooms.push_back(new Kitchenroom(kitchen));
+	rooms.push_back(new Bathroom(bathroom));
+	rooms.push_back(new Livingroom(livingroom));
+
+	sort(rooms.begin(), rooms.end(),
+		[](const Room* a, const Room* b)
+		{
+			if (a->highPriorityItem == b->highPriorityItem)
+			{
+				return a->cntItems > b->cntItems;
+			}
+			else return a->highPriorityItem > b->highPriorityItem;
+		}
+	);
+
+	if (rooms.at(0)->highPriorityItem == 0 && rooms.at(0)->cntItems == 0) return "Room is not identified";
+	else return rooms.at(0)->Name();
+}
+
+std::vector<std::string> test_main(std::string type_of_room, const std::string& pathN = "0")
+{
+	const float nmsThreshold = 0.45f;
+	const float probThreshold = 0.2f;
+	
+	std::vector<std::pair<std::string, float>> imgVec;
 	std::string imageName;
-	cv::Mat embInput = cv::imread(cv::utils::fs::join(inputPath, inputName + ".jpg"));
-	std::vector<float> inputVec = embedding.embed(embInput);
+	Embedding embedding;
+	std::string path = pathN;
+	char ch = '\\';
+	for (int i = 0; i < path.size(); i++) {
+		if (path.at(i) == ch) path.at(i) = '/';
+	}
 
-	std::vector<float> imageVec;
-	float dist;
-	float ecdist;
-	float mindist(100000);
-	cv::Mat similarImg;
+	float dist(0), ecdist(0);
+	cv::Mat inputImage = cv::imread(path);
+	std::vector<float> inputVec = embedding.embed(inputImage);
+	std::vector<float> tmpVec;
 	for (const auto& entry : std::filesystem::directory_iterator("C:/Users/79308/Desktop/projectRealtor/data3")) {
 		imageName = entry.path().filename().string();
 		cv::Mat img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data3", imageName));
-		imageVec = embedding.embed(img);
-		dist = 0;
-		for (int i = 0; i < inputVec.size(); i++) {
-			dist += pow((inputVec.at(i) - imageVec.at(i)), 2);
+		if ((tolower(type_of_room.at(0)) == tolower(test_func(nmsThreshold, probThreshold, img).at(0))))
+		{
+			if (path != "0") {
+				dist = 0;
+				tmpVec = embedding.embed(img);
+				for (int i = 0; i < inputVec.size(); i++) {
+					dist += pow((inputVec.at(i) - tmpVec.at(i)), 2);
+				}
+				ecdist = sqrt(dist);
+			}
+			imgVec.push_back({ imageName, ecdist });
 		}
-		ecdist = sqrt(dist);
-		if (ecdist < mindist && ecdist != 0) {
-			mindist = ecdist;
-			similarImg = img;
-		}
-		
 	}
-	imshow("similar image", similarImg);
+
+	std::sort(imgVec.begin(), imgVec.end(),
+		[](std::pair<std::string, float>& a, std::pair<std::string, float>& b) { return a.second < b.second; });
+	std::vector<std::string> outVec;
+	
+	int cnt(0);
+	if (path != "0") {
+		for (int i = 0; i < std::min((size_t)3, imgVec.size()); i++) { outVec.push_back(imgVec.at(i).first); }
+	}
+	else {
+		for (int i = 0; i < imgVec.size(); i++) { outVec.push_back(imgVec.at(i).first); }
+	}
+	return outVec;
 }
 
-int main() {
-	std::cout << "input name of your image" << std::endl;
-	std::string yourImg;
-	std::cin >> yourImg;
-	
-	switch (yourImg.at(0)) {
-	case ('k'):
-		emb_func("C:/Users/79308/Desktop/projectRealtor/data/kitchen", yourImg);
-		break;
-	case ('l'):
-		emb_func("C:/Users/79308/Desktop/projectRealtor/data/livingroom", yourImg);
-		break;
-	case ('b'):
-		emb_func("C:/Users/79308/Desktop/projectRealtor/data/bathroom", yourImg);
-		break;
-	default:
-		break;
-	}
+void test_detect(std::string type_of_room)
+{
+	const float nmsThreshold = 0.45f;
+	const float probThreshold = 0.2f;
+	std::string imageName;
 
+	for (const auto& entry : std::filesystem::directory_iterator("C:/Users/79308/Desktop/projectRealtor/data3")) {
+		imageName = entry.path().filename().string();
+		cv::Mat img = cv::imread(cv::utils::fs::join("C:/Users/79308/Desktop/projectRealtor/data3", imageName));
+		
+		if (tolower(type_of_room.at(0)) == tolower(test_func(nmsThreshold, probThreshold, img).at(0)))
+		{
+			std::cout << imageName << std::endl;
+		}
+	}
 	cv::waitKey();
 }
+
+
+
+int main()
+{
+	const float nmsThreshold = 0.45f;
+	const float probThreshold = 0.2f;
+	std::string typeRoom, path;
+	std::cout << "Input type of room (q for quit)\n>> ";
+	std::cin >> typeRoom;
+	if (typeRoom == "q") return 0;
+	std::cout << "Input path to image if you want to get similar to it (q - if you don't need it)\n>> ";
+	std::cin >> path;
+	std::vector<std::string> outputVec;
+	while (typeRoom != "q") {
+		if (path == "q") { 
+			test_detect(typeRoom); 
+		}
+		else {
+			outputVec = test_main(typeRoom, path);
+			for (int i = 0; i < outputVec.size(); i++) {
+				std::cout << outputVec.at(i) << std::endl;
+			}
+		}
+		std::cout << "\nInput type of room (q for quit)\n>> ";
+		std::cin >> typeRoom;
+		if (typeRoom == "q") break;
+		std::cout << "Input path to image if you want to get similar to it (q - if you don't need it)\n>> ";
+		std::cin >> path;
+	}
+}
+
